@@ -102,14 +102,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Application Header
-col1, col2, col3 = st.columns([1,2,1])
-with col2:
-    st.title('📊 T-Test Analysis')
-    st.markdown("""
-        <p style='text-align: center; color: #666; font-size: 1.2em; margin-bottom: 2rem;'>
-            A comprehensive statistical analysis tool for comparing means
-        </p>
-    """, unsafe_allow_html=True)
+# Remove the nested columns to avoid Streamlit nesting error
+st.title('📊 T-Test Analysis')
+st.markdown("""
+    <p style='text-align: center; color: #666; font-size: 1.2em; margin-bottom: 2rem;'>
+        A comprehensive statistical analysis tool for comparing means
+    </p>
+""", unsafe_allow_html=True)
 
 # Information Cards about test types
 st.markdown("""
