@@ -690,8 +690,8 @@ def get_pdf_download_link(pdf, filename="t_test_analysis.pdf"):
                 return ""
             
             try:
-                # Get PDF output and encode it
-                pdf_output = pdf.output(dest="S").encode('latin-1')
+                # Get PDF output - it's already a bytearray
+                pdf_output = pdf.output(dest="S")
                 b64 = base64.b64encode(pdf_output).decode()
                 
                 if not b64:
