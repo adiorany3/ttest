@@ -5,6 +5,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from fpdf import FPDF
+from fpdf.enums import XPos, YPos
 import base64
 from io import BytesIO
 import tempfile
@@ -506,7 +507,7 @@ def create_enhanced_visualization(data1, data2=None, test_type='one_sample'):
                     res = stats.probplot(diff, dist="norm", fit=True)
                     probplot_x = res[0][0]
                     probplot_y = res[0][1]
-                    slope, intercept = res[1]
+                    slope, intercept = res[1][0], res[1][1]  # Correctly unpack slope and intercept
                     
                     # Plot points and line
                     ax4.scatter(probplot_x, probplot_y, color='blue', alpha=0.6, label='Data')
@@ -575,13 +576,13 @@ def create_pdf_report(test_type, results, alpha, data1, data2=None):
         
         # Add header with default font
         pdf.set_font('Helvetica', 'B', 20)
-        pdf.cell(0, 15, 'T-Test Analysis Report', 0, 1, 'C')
+        pdf.cell(0, 15, 'T-Test Analysis Report', 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
         pdf.line(10, 30, 200, 30)  # Add a horizontal line
-        pdf.ln(5)
+        pdf.set_y(pdf.get_y() + 5)  # Replace ln(5)
         
         # Test Type
         pdf.set_font('Helvetica', '', 12)
-        pdf.cell(0, 10, f'Test Type: {test_type}', 0, 1)
+        pdf.cell(0, 10, f'Test Type: {test_type}', 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         
         # Results
         if not results:
@@ -621,20 +622,20 @@ def create_pdf_report(test_type, results, alpha, data1, data2=None):
             stats1 = calculate_descriptive_stats(data1)
             # Group 1/Sample Statistics
             header = "Sample Statistics:" if test_type == "One Sample T-Test" else "Group 1 Statistics:"
-            pdf.cell(0, 10, header, 0, 1)
-            pdf.cell(0, 10, f'Mean: {stats1["Mean"]:.4f}', 0, 1)
-            pdf.cell(0, 10, f'Median: {stats1["Median"]:.4f}', 0, 1)
-            pdf.cell(0, 10, f'Standard Deviation: {stats1["Std Dev"]:.4f}', 0, 1)
+            pdf.cell(0, 10, header, 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.cell(0, 10, f'Mean: {stats1["Mean"]:.4f}', 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.cell(0, 10, f'Median: {stats1["Median"]:.4f}', 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.cell(0, 10, f'Standard Deviation: {stats1["Std Dev"]:.4f}', 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             
             if data2 is not None:
-                pdf.ln(5)
+                pdf.set_y(pdf.get_y() + 5)  # Replace ln(5)
                 pdf.set_font('Helvetica', 'B', 12)
-                pdf.cell(0, 10, 'Group 2 Statistics:', 0, 1)
+                pdf.cell(0, 10, 'Group 2 Statistics:', 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
                 pdf.set_font('Helvetica', '', 12)
                 stats2 = calculate_descriptive_stats(data2)
-                pdf.cell(0, 10, f'Mean: {stats2["Mean"]:.4f}', 0, 1)
-                pdf.cell(0, 10, f'Median: {stats2["Median"]:.4f}', 0, 1)
-                pdf.cell(0, 10, f'Standard Deviation: {stats2["Std Dev"]:.4f}', 0, 1)
+                pdf.cell(0, 10, f'Mean: {stats2["Mean"]:.4f}', 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+                pdf.cell(0, 10, f'Median: {stats2["Median"]:.4f}', 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+                pdf.cell(0, 10, f'Standard Deviation: {stats2["Std Dev"]:.4f}', 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
                 
         except Exception as e:
             pdf.cell(0, 10, f'Error calculating descriptive statistics: {str(e)}', 0, 1)
@@ -690,9 +691,9 @@ def get_pdf_download_link(pdf, filename="t_test_analysis.pdf"):
                 return ""
             
             try:
-                # Get PDF output - it's already a bytearray
-                pdf_output = pdf.output(dest="S")
-                b64 = base64.b64encode(pdf_output).decode()
+                # Convert PDF to bytes using latin-1 encoding for compatibility
+                pdf_bytes = pdf.output().encode('latin-1')
+                b64 = base64.b64encode(pdf_bytes).decode()
                 
                 if not b64:
                     st.warning("Generated PDF is empty")
@@ -788,78 +789,75 @@ if test_type == 'One Sample T-Test':
 else:  # Independent T-Test
     st.subheader('Independent T-Test')
     
-    col1, col2 = st.columns(2)
-    with col1:
-        uploaded_file = st.file_uploader("Upload your data file (CSV or Excel)", 
-                                       type=['csv', 'xlsx', 'xls'], 
-                                       key="independent_test")
-        
-        if uploaded_file is not None:
-            df = read_file_data(uploaded_file)
-            if df is not None:
-                group1_col = st.selectbox("Choose column for Group 1", df.columns)
-                group2_col = st.selectbox("Choose column for Group 2", df.columns)
+    uploaded_file = st.file_uploader("Upload your data file (CSV or Excel)", 
+                                   type=['csv', 'xlsx', 'xls'], 
+                                   key="independent_test")
+    
+    if uploaded_file is not None:
+        df = read_file_data(uploaded_file)
+        if df is not None:
+            group1_col = st.selectbox("Choose column for Group 1", df.columns)
+            group2_col = st.selectbox("Choose column for Group 2", df.columns)
+            
+            group1 = df[group1_col].dropna().values
+            group2 = df[group2_col].dropna().values
+            
+            if len(group1) < 2 or len(group2) < 2:
+                st.error("Each group must have at least 2 observations")
+            else:
+                st.write(f"Preview of {group1_col}:", group1[:5])
+                st.write(f"Preview of {group2_col}:", group2[:5])
                 
-                group1 = df[group1_col].dropna().values
-                group2 = df[group2_col].dropna().values
-                
-                if len(group1) < 2 or len(group2) < 2:
-                    st.error("Each group must have at least 2 observations")
-                else:
-                    st.write(f"Preview of {group1_col}:", group1[:5])
-                    st.write(f"Preview of {group2_col}:", group2[:5])
-                    
-                    if st.button('Calculate'):
-                        try:
-                            # Perform t-test
-                            t_stat, p_value = stats.ttest_ind(group1, group2)
-                            effect_size = calculate_effect_size(group1, group2, test_type='independent')
-                            diff_ci = stats.t.interval(1-alpha, len(group1)+len(group2)-2,
-                                                     loc=np.mean(group1)-np.mean(group2),
-                                                     scale=np.sqrt(np.var(group1)/len(group1) + 
-                                                                 np.var(group2)/len(group2)))
+                if st.button('Calculate'):
+                    try:
+                        # Perform t-test
+                        t_stat, p_value = stats.ttest_ind(group1, group2)
+                        effect_size = calculate_effect_size(group1, group2, test_type='independent')
+                        diff_ci = stats.t.interval(1-alpha, len(group1)+len(group2)-2,
+                                                 loc=np.mean(group1)-np.mean(group2),
+                                                 scale=np.sqrt(np.var(group1)/len(group1) + 
+                                                             np.var(group2)/len(group2)))
+                        
+                        results = {
+                            'Group 1 Mean': np.mean(group1),
+                            'Group 2 Mean': np.mean(group2),
+                            'Mean Difference': np.mean(group1) - np.mean(group2),
+                            'Group 1 Size': len(group1),
+                            'Group 2 Size': len(group2),
+                            'T-statistic': t_stat,
+                            'P-value': p_value,
+                            'Effect Size (Cohen\'s d)': effect_size,
+                            f'{(1-alpha)*100}% CI of difference': f'[{diff_ci[0]:.4f}, {diff_ci[1]:.4f}]'
+                        }
+                        
+                        # Display descriptive statistics
+                        st.write("### Group Statistics")
+                        stats_cols = st.columns(2)
+                        with stats_cols[0]:
+                            display_descriptive_stats(group1, "Group 1")
+                        with stats_cols[1]:
+                            display_descriptive_stats(group2, "Group 2")
+                        
+                        # Display test results
+                        display_statistics(results, alpha, 'independent')
+                        
+                        # Create and display visualizations
+                        st.write('### Enhanced Visualization')
+                        fig = create_enhanced_visualization(group1, group2, test_type='independent')
+                        st.pyplot(fig)
+                        
+                        # Add ANOVA analysis
+                        anova_table = calculate_anova(group1, group2)
+                        display_anova_table(anova_table)
+                        
+                        # Generate and display download button
+                        pdf = create_pdf_report(test_type, results, alpha, group1, group2)
+                        download_link = get_pdf_download_link(pdf, "independent_t_test_report.pdf")
+                        if download_link:
+                            st.markdown(download_link, unsafe_allow_html=True)
                             
-                            results = {
-                                'Group 1 Mean': np.mean(group1),
-                                'Group 2 Mean': np.mean(group2),
-                                'Mean Difference': np.mean(group1) - np.mean(group2),
-                                'Group 1 Size': len(group1),
-                                'Group 2 Size': len(group2),
-                                'T-statistic': t_stat,
-                                'P-value': p_value,
-                                'Effect Size (Cohen\'s d)': effect_size,
-                                f'{(1-alpha)*100}% CI of difference': f'[{diff_ci[0]:.4f}, {diff_ci[1]:.4f}]'
-                            }
-                            
-                            with col2:
-                                # Add descriptive statistics for both groups
-                                col_stats1, col_stats2 = st.columns(2)
-                                with col_stats1:
-                                    display_descriptive_stats(group1, "Group 1")
-                                with col_stats2:
-                                    display_descriptive_stats(group2, "Group 2")
-                                
-                                display_statistics(results, alpha, 'independent')
-                            
-                            st.write('### Enhanced Visualization')
-                            fig = create_enhanced_visualization(group1, group2, test_type='independent')
-                            st.pyplot(fig)
-                            
-                            # Add ANOVA analysis
-                            anova_table = calculate_anova(group1, group2)
-                            display_anova_table(anova_table)
-                            
-                            # Generate and display download button
-                            try:
-                                pdf = create_pdf_report(test_type, results, alpha, group1, group2)
-                                download_link = get_pdf_download_link(pdf, "independent_t_test_report.pdf")
-                                if download_link:
-                                    st.markdown(download_link, unsafe_allow_html=True)
-                            except Exception as e:
-                                st.error(f"Could not generate PDF report: {str(e)}")
-                            
-                        except Exception as e:
-                            st.error(f'Error: {str(e)}. Please check your input data.')
+                    except Exception as e:
+                        st.error(f'Error: {str(e)}. Please check your input data.')
 
 # Add general interpretations
 st.markdown("""
