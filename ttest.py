@@ -725,66 +725,65 @@ with st.sidebar:
 if test_type == 'One Sample T-Test':
     st.subheader('One Sample T-Test')
     
-    col1, col2 = st.columns(2)
-    with col1:
-        uploaded_file = st.file_uploader("Upload your data file (CSV or Excel)", type=['csv', 'xlsx', 'xls'])
-        
-        if uploaded_file is not None:
-            df = read_file_data(uploaded_file)
-            if df is not None:
-                selected_column = st.selectbox("Select column for analysis", df.columns)
-                data = df[selected_column].dropna().values
-                st.write(f"Preview of {selected_column}:", data[:5])
-                
-                hypothesized_mean = st.number_input('Enter hypothesized mean:', value=0.0)
-                
-                if st.button('Calculate'):
+    uploaded_file = st.file_uploader("Upload your data file (CSV or Excel)", type=['csv', 'xlsx', 'xls'])
+    
+    if uploaded_file is not None:
+        df = read_file_data(uploaded_file)
+        if df is not None:
+            selected_column = st.selectbox("Select column for analysis", df.columns)
+            data = df[selected_column].dropna().values
+            st.write(f"Preview of {selected_column}:", data[:5])
+            
+            hypothesized_mean = st.number_input('Enter hypothesized mean:', value=0.0)
+            
+            if st.button('Calculate'):
+                try:
+                    # Perform t-test
+                    t_stat, p_value = stats.ttest_1samp(data, hypothesized_mean)
+                    ci = stats.t.interval(1-alpha, len(data)-1, loc=np.mean(data), 
+                                       scale=stats.sem(data))
+                    effect_size = calculate_effect_size(data, test_type='one_sample')
+                    
+                    results = {
+                        'Sample Mean': np.mean(data),
+                        'Sample Size': len(data),
+                        'T-statistic': t_stat,
+                        'P-value': p_value,
+                        'Effect Size (Cohen\'s d)': effect_size,
+                        f'{(1-alpha)*100}% Confidence Interval': f'[{ci[0]:.4f}, {ci[1]:.4f}]'
+                    }
+                    
+                    # Add descriptive statistics
+                    display_descriptive_stats(data, "Sample Data")
+                    
+                    # Display test results
+                    display_statistics(results, alpha, 'one_sample')
+                    
+                    # Display visualization
+                    st.write('### Enhanced Visualization')
                     try:
-                        # Perform t-test
-                        t_stat, p_value = stats.ttest_1samp(data, hypothesized_mean)
-                        ci = stats.t.interval(1-alpha, len(data)-1, loc=np.mean(data), 
-                                           scale=stats.sem(data))
-                        effect_size = calculate_effect_size(data, test_type='one_sample')
-                        
-                        results = {
-                            'Sample Mean': np.mean(data),
-                            'Sample Size': len(data),
-                            'T-statistic': t_stat,
-                            'P-value': p_value,
-                            'Effect Size (Cohen\'s d)': effect_size,
-                            f'{(1-alpha)*100}% Confidence Interval': f'[{ci[0]:.4f}, {ci[1]:.4f}]'
-                        };
-                        
-                        with col2:
-                            # Add descriptive statistics
-                            display_descriptive_stats(data, "Sample Data")
-                            
-                            display_statistics(results, alpha, 'one_sample')
-                        
-                        st.write('### Enhanced Visualization')
-                        try:
-                            # Convert test type to the format expected by visualization function
-                            viz_test_type = 'one_sample' if test_type == 'One Sample T-Test' else 'independent'
-                            fig = create_enhanced_visualization(data, test_type=viz_test_type)
-                            if fig is not None:
-                                st.pyplot(fig)
-                            else:
-                                st.warning("Could not create visualization")
-                        except Exception as viz_error:
-                            st.error(f"Error creating visualization: {str(viz_error)}")
-                            plt.close('all')  # Clean up any open figures
+                        # Convert test type to the format expected by visualization function
+                        viz_test_type = 'one_sample' if test_type == 'One Sample T-Test' else 'independent'
+                        fig = create_enhanced_visualization(data, test_type=viz_test_type)
+                        if fig is not None:
+                            st.pyplot(fig)
+                        else:
+                            st.warning("Could not create visualization")
+                    except Exception as viz_error:
+                        st.error(f"Error creating visualization: {str(viz_error)}")
+                        plt.close('all')  # Clean up any open figures
 
-                        # Generate and display download button
-                        try:
-                            pdf = create_pdf_report(test_type, results, alpha, data)
-                            download_link = get_pdf_download_link(pdf, "one_sample_t_test_report.pdf")
-                            if download_link:
-                                st.markdown(download_link, unsafe_allow_html=True)
-                        except Exception as e:
-                            st.error(f"Could not generate PDF report: {str(e)}")
-                        
+                    # Generate and display download button
+                    try:
+                        pdf = create_pdf_report(test_type, results, alpha, data)
+                        download_link = get_pdf_download_link(pdf, "one_sample_t_test_report.pdf")
+                        if download_link:
+                            st.markdown(download_link, unsafe_allow_html=True)
                     except Exception as e:
-                        st.error(f'Error: {str(e)}. Please check your input data.')
+                        st.error(f"Could not generate PDF report: {str(e)}")
+                    
+                except Exception as e:
+                    st.error(f'Error: {str(e)}. Please check your input data.')
 
 else:  # Independent T-Test
     st.subheader('Independent T-Test')
