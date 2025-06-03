@@ -1,0 +1,8 @@
+streamlit
+numpy
+scipy
+pandas
+seaborn
+matplotlib
+fpdf2
+base64
