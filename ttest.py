@@ -361,25 +361,20 @@ def calculate_descriptive_stats(data):
 def display_descriptive_stats(data, group_name="Sample"):
     """Display descriptive statistics in a formatted way."""
     stats = calculate_descriptive_stats(data)
-    st.write(f"### Descriptive Statistics - {group_name}")
     
-    # Create two columns for better organization
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.write("Central Tendency & Dispersion:")
-        st.write(f"- Mean: {stats['Mean']:.4f}")
-        st.write(f"- Median: {stats['Median']:.4f}")
-        st.write(f"- Standard Deviation: {stats['Std Dev']:.4f}")
-        st.write(f"- Minimum: {stats['Min']:.4f}")
-        st.write(f"- Maximum: {stats['Max']:.4f}")
-    
-    with col2:
-        st.write("Distribution Shape:")
-        st.write(f"- Q1 (25th percentile): {stats['Q1']:.4f}")
-        st.write(f"- Q3 (75th percentile): {stats['Q3']:.4f}")
-        st.write(f"- Skewness: {stats['Skewness']:.4f}")
-        st.write(f"- Kurtosis: {stats['Kurtosis']:.4f}")
+    # Display statistics in a linear layout
+    st.write("Central Tendency & Dispersion:")
+    st.write(f"- Mean: {stats['Mean']:.4f}")
+    st.write(f"- Median: {stats['Median']:.4f}")
+    st.write(f"- Standard Deviation: {stats['Std Dev']:.4f}")
+    st.write(f"- Minimum: {stats['Min']:.4f}")
+    st.write(f"- Maximum: {stats['Max']:.4f}")
+
+    st.write("\nDistribution Shape:")
+    st.write(f"- Q1 (25th percentile): {stats['Q1']:.4f}")
+    st.write(f"- Q3 (75th percentile): {stats['Q3']:.4f}")
+    st.write(f"- Skewness: {stats['Skewness']:.4f}")
+    st.write(f"- Kurtosis: {stats['Kurtosis']:.4f}")
     
     # Interpret skewness and kurtosis
     st.write("### Distribution Interpretation")
@@ -845,13 +840,12 @@ else:  # Independent T-Test
                             f'{(1-alpha)*100}% CI of difference': f'[{diff_ci[0]:.4f}, {diff_ci[1]:.4f}]'
                         }
                         
-                        # Display descriptive statistics
+                        # Display descriptive statistics in a linear layout
                         st.write("### Group Statistics")
-                        stats_cols = st.columns(2)
-                        with stats_cols[0]:
-                            display_descriptive_stats(group1, "Group 1")
-                        with stats_cols[1]:
-                            display_descriptive_stats(group2, "Group 2")
+                        st.write("#### Group 1")
+                        display_descriptive_stats(group1, "Group 1")
+                        st.write("#### Group 2")
+                        display_descriptive_stats(group2, "Group 2")
                         
                         # Display test results
                         display_statistics(results, alpha, 'independent')
