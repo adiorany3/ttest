@@ -691,8 +691,8 @@ def get_pdf_download_link(pdf, filename="t_test_analysis.pdf"):
                 return ""
             
             try:
-                # Convert PDF to bytes using latin-1 encoding for compatibility
-                pdf_bytes = pdf.output().encode('latin-1')
+                # Get PDF bytes directly without additional encoding
+                pdf_bytes = pdf.output()  # This already returns bytes
                 b64 = base64.b64encode(pdf_bytes).decode()
                 
                 if not b64:
@@ -796,8 +796,24 @@ else:  # Independent T-Test
     if uploaded_file is not None:
         df = read_file_data(uploaded_file)
         if df is not None:
-            group1_col = st.selectbox("Choose column for Group 1", df.columns)
-            group2_col = st.selectbox("Choose column for Group 2", df.columns)
+            st.markdown("""
+            ### Column Selection Guide
+            - **Group 1**: Select the column containing your first group's measurements (e.g., control group, pre-treatment)
+            - **Group 2**: Select the column containing your second group's measurements (e.g., treatment group, post-treatment)
+            
+            Both columns should contain numerical data with similar scales of measurement.
+            """)
+            
+            group1_col = st.selectbox(
+                "Choose column for Group 1 (e.g., Control Group)", 
+                df.columns,
+                help="Select the column containing measurements for your first group (e.g., control group, pre-treatment, method A)"
+            )
+            group2_col = st.selectbox(
+                "Choose column for Group 2 (e.g., Treatment Group)", 
+                df.columns,
+                help="Select the column containing measurements for your second group (e.g., treatment group, post-treatment, method B)"
+            )
             
             group1 = df[group1_col].dropna().values
             group2 = df[group2_col].dropna().values
